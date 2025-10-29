@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CalendarIcon, DollarSign, TrendingUp, ExternalLink } from "lucide-react";
+import { CalendarIcon, DollarSign, TrendingUp, ExternalLink, LogOut } from "lucide-react";
 import { format, addWeeks, startOfMonth, endOfMonth, isSameDay, parseISO } from "date-fns";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 type Payment = {
   date: string;
@@ -13,8 +15,41 @@ type Payment = {
 };
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const startDate = new Date(2025, 0, 1); // Jan 1, 2025
   const paymentAmount = 300;
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Check authentication and admin role
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.user) {
+        navigate("/login");
+        return;
+      }
+
+      // Check admin role
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", session.user.id)
+        .eq("role", "admin")
+        .single();
+
+      if (!roles) {
+        toast.error("Access denied. Admin privileges required.");
+        await supabase.auth.signOut();
+        navigate("/login");
+        return;
+      }
+
+      setIsLoading(false);
+    };
+
+    checkAuth();
+  }, [navigate]);
   
   // Generate bi-weekly payments for the year
   const generatePayments = (): Payment[] => {
@@ -96,6 +131,25 @@ const Dashboard = () => {
 
   const clientLink = `${window.location.origin}/client`;
 
+  const copyClientLink = () => {
+    navigator.clipboard.writeText(clientLink);
+    toast.success("Client link copied to clipboard!");
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    toast.success("Logged out successfully");
+    navigate("/login");
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -108,16 +162,20 @@ const Dashboard = () => {
             </h1>
             <p className="text-muted-foreground mt-1">Bi-weekly payment tracking</p>
           </div>
-          <Button
-            variant="outline"
-            onClick={() => {
-              navigator.clipboard.writeText(clientLink);
-            }}
-            className="flex items-center gap-2"
-          >
-            <ExternalLink className="h-4 w-4" />
-            Copy Client Link
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={copyClientLink}
+              className="flex items-center gap-2"
+            >
+              <ExternalLink className="h-4 w-4" />
+              Copy Client Link
+            </Button>
+            <Button variant="outline" onClick={handleLogout} className="flex items-center gap-2">
+              <LogOut className="h-4 w-4" />
+              Logout
+            </Button>
+          </div>
         </div>
 
         {/* Stats Cards */}
