@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CalendarIcon, DollarSign, TrendingUp, ExternalLink } from "lucide-react";
 import { format, addWeeks, startOfMonth, endOfMonth, isSameDay, parseISO } from "date-fns";
+import { toast } from "sonner";
 
 type Payment = {
   date: string;
@@ -32,13 +33,49 @@ const Dashboard = () => {
     return payments;
   };
 
-  const [payments, setPayments] = useState<Payment[]>(generatePayments());
+  // Load payments from localStorage or generate new ones
+  const loadPayments = (): Payment[] => {
+    const stored = localStorage.getItem("payment-statuses");
+    if (stored) {
+      try {
+        const statuses: Record<string, string> = JSON.parse(stored);
+        const generated = generatePayments();
+        // Merge stored statuses with generated payments
+        return generated.map(p => {
+          const storedStatus = statuses[p.date];
+          return {
+            ...p,
+            status: (storedStatus === "paid" || storedStatus === "due") ? storedStatus : p.status
+          };
+        });
+      } catch (e) {
+        return generatePayments();
+      }
+    }
+    return generatePayments();
+  };
+
+  const [payments, setPayments] = useState<Payment[]>(loadPayments());
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   const togglePaymentStatus = (date: string) => {
-    setPayments(payments.map(p => 
-      p.date === date ? { ...p, status: p.status === "paid" ? "due" : "paid" } : p
-    ));
+    const updatedPayments = payments.map(p => {
+      if (p.date === date) {
+        const newStatus: "paid" | "due" = p.status === "paid" ? "due" : "paid";
+        return { ...p, status: newStatus };
+      }
+      return p;
+    });
+    setPayments(updatedPayments);
+    
+    // Save to localStorage
+    const statuses: Record<string, "paid" | "due"> = {};
+    updatedPayments.forEach(p => {
+      statuses[p.date] = p.status;
+    });
+    localStorage.setItem("payment-statuses", JSON.stringify(statuses));
+    
+    toast.success("Payment status updated");
   };
 
   const monthStart = startOfMonth(currentMonth);

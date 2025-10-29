@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,7 +31,41 @@ const ClientView = () => {
     return payments;
   };
 
-  const [payments] = useState<Payment[]>(generatePayments());
+  // Load payments from localStorage
+  const loadPayments = (): Payment[] => {
+    const stored = localStorage.getItem("payment-statuses");
+    if (stored) {
+      try {
+        const statuses: Record<string, string> = JSON.parse(stored);
+        const generated = generatePayments();
+        // Merge stored statuses with generated payments
+        return generated.map(p => {
+          const storedStatus = statuses[p.date];
+          return {
+            ...p,
+            status: (storedStatus === "paid" || storedStatus === "due") ? storedStatus : p.status
+          };
+        });
+      } catch (e) {
+        return generatePayments();
+      }
+    }
+    return generatePayments();
+  };
+
+  const [payments, setPayments] = useState<Payment[]>(loadPayments());
+
+  // Reload payments when the page becomes visible (when user switches tabs)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        setPayments(loadPayments());
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, []);
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   const monthStart = startOfMonth(currentMonth);
