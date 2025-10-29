@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon, DollarSign } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { CalendarIcon, DollarSign, AlertCircle } from "lucide-react";
 import { format, addWeeks, startOfMonth, endOfMonth, parseISO } from "date-fns";
 
 type Payment = {
@@ -80,6 +81,10 @@ const ClientView = () => {
     .filter(p => p.status === "paid")
     .reduce((sum, p) => sum + p.amount, 0);
 
+  const totalDue = payments
+    .filter(p => p.status === "due" && parseISO(p.date) <= new Date())
+    .reduce((sum, p) => sum + p.amount, 0);
+
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="max-w-5xl mx-auto space-y-6">
@@ -91,6 +96,17 @@ const ClientView = () => {
           </h1>
           <p className="text-muted-foreground mt-2">View your payment schedule and status</p>
         </div>
+
+        {/* Due Payment Alert */}
+        {totalDue > 0 && (
+          <Alert variant="destructive" className="border-destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Payment Due</AlertTitle>
+            <AlertDescription>
+              You have ${totalDue} in overdue payments that need to be cleared.
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Monthly Summary */}
         <Card className="p-6">
