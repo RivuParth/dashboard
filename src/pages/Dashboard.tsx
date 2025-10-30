@@ -4,9 +4,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CalendarIcon, DollarSign, TrendingUp, ExternalLink, LogOut } from "lucide-react";
-import { format, addWeeks, startOfMonth, endOfMonth, isSameDay, parseISO } from "date-fns";
+import { format, addWeeks, startOfMonth, endOfMonth, parseISO } from "date-fns";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 
 type Payment = {
   date: string;
@@ -16,39 +15,22 @@ type Payment = {
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const startDate = new Date(2025, 0, 1); // Jan 1, 2025
+  const startDate = new Date(2025, 9, 31); // Oct 31, 2025
   const paymentAmount = 300;
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check authentication and admin role
+  // Check authentication
   useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session?.user) {
-        navigate("/login");
-        return;
-      }
+    const isLoggedIn = sessionStorage.getItem("admin_logged_in");
+    
+    if (isLoggedIn !== "true") {
+      navigate("/login");
+      return;
+    }
 
-      // Check admin role
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", session.user.id)
-        .eq("role", "admin")
-        .single();
-
-      if (!roles) {
-        toast.error("Access denied. Admin privileges required.");
-        await supabase.auth.signOut();
-        navigate("/login");
-        return;
-      }
-
-      setIsLoading(false);
-    };
-
-    checkAuth();
+    // Clear old payment data to start fresh
+    localStorage.removeItem("payment-statuses");
+    setIsLoading(false);
   }, [navigate]);
   
   // Generate bi-weekly payments for the year
@@ -136,8 +118,8 @@ const Dashboard = () => {
     toast.success("Client link copied to clipboard!");
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
+  const handleLogout = () => {
+    sessionStorage.removeItem("admin_logged_in");
     toast.success("Logged out successfully");
     navigate("/login");
   };

@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { LockIcon, AlertCircle } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+
+const ADMIN_EMAIL = "parthbhowmick00@gmail.com";
+const ADMIN_PASSWORD = "Rivu@1499";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -15,27 +17,13 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const [isSignUp, setIsSignUp] = useState(false);
 
   useEffect(() => {
     // Check if already logged in
-    const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        // Check if user is admin
-        const { data: roles } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", session.user.id)
-          .eq("role", "admin")
-          .single();
-        
-        if (roles) {
-          navigate("/");
-        }
-      }
-    };
-    checkUser();
+    const isLoggedIn = sessionStorage.getItem("admin_logged_in");
+    if (isLoggedIn === "true") {
+      navigate("/");
+    }
   }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -44,64 +32,16 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      if (isSignUp) {
-        // Sign up new user
-        const { data, error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/`
-          }
-        });
-
-        if (signUpError) throw signUpError;
-
-        if (data.user) {
-          // Assign admin role to new user
-          const { error: roleError } = await supabase
-            .from("user_roles")
-            .insert({ user_id: data.user.id, role: "admin" });
-
-          if (roleError) {
-            console.error("Role assignment error:", roleError);
-            setError("Account created but role assignment failed. Please contact support.");
-            return;
-          }
-
-          toast.success("Admin account created successfully!");
-          navigate("/");
-        }
+      // Check static credentials
+      if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+        sessionStorage.setItem("admin_logged_in", "true");
+        toast.success("Logged in successfully");
+        navigate("/");
       } else {
-        // Sign in existing user
-        const { data, error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-
-        if (signInError) throw signInError;
-
-        if (data.user) {
-          // Check if user has admin role
-          const { data: roles, error: roleError } = await supabase
-            .from("user_roles")
-            .select("role")
-            .eq("user_id", data.user.id)
-            .eq("role", "admin")
-            .single();
-
-          if (roleError || !roles) {
-            setError("Access denied. Admin privileges required.");
-            await supabase.auth.signOut();
-            setIsLoading(false);
-            return;
-          }
-
-          toast.success("Logged in successfully");
-          navigate("/");
-        }
+        setError("Invalid credentials. Please check your email and password.");
       }
     } catch (err: any) {
-      setError(err.message || `${isSignUp ? 'Sign up' : 'Login'} failed. Please check your credentials.`);
+      setError("Login failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -117,13 +57,10 @@ const Login = () => {
             </div>
           </div>
           <h1 className="text-3xl font-bold text-foreground">
-            {isSignUp ? "Create Admin Account" : "Admin Login"}
+            Admin Login
           </h1>
           <p className="text-muted-foreground mt-2">
-            {isSignUp 
-              ? "Register your admin account to access the dashboard" 
-              : "Sign in to access the payment dashboard"
-            }
+            Sign in to access the payment dashboard
           </p>
         </div>
 
@@ -162,29 +99,9 @@ const Login = () => {
           </div>
 
           <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading 
-              ? (isSignUp ? "Creating account..." : "Signing in...") 
-              : (isSignUp ? "Create Admin Account" : "Sign In")
-            }
+            {isLoading ? "Signing in..." : "Sign In"}
           </Button>
         </form>
-
-        <div className="mt-6 text-center">
-          <button
-            type="button"
-            onClick={() => {
-              setIsSignUp(!isSignUp);
-              setError("");
-            }}
-            className="text-sm text-primary hover:underline"
-            disabled={isLoading}
-          >
-            {isSignUp 
-              ? "Already have an account? Sign in" 
-              : "Need an account? Create one"
-            }
-          </button>
-        </div>
 
         <div className="mt-4 text-center text-sm text-muted-foreground">
           <p>Admin access only</p>
