@@ -37,7 +37,7 @@ const Dashboard = () => {
   const generatePayments = (): Payment[] => {
     const payments: Payment[] = [];
     let currentDate = startDate;
-    const endDate = new Date(2025, 11, 31);
+    const endDate = new Date(2028, 11, 31); // Dec 31, 2028
     
     while (currentDate <= endDate) {
       payments.push({
