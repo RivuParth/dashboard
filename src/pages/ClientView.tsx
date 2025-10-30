@@ -13,7 +13,7 @@ type Payment = {
 };
 
 const ClientView = () => {
-  const startDate = new Date(2025, 0, 1);
+  const startDate = new Date(2025, 9, 31); // Oct 31, 2025
   const paymentAmount = 300;
   
   const generatePayments = (): Payment[] => {
@@ -56,7 +56,7 @@ const ClientView = () => {
 
   const [payments, setPayments] = useState<Payment[]>(loadPayments());
 
-  // Reload payments when the page becomes visible (when user switches tabs)
+  // Reload payments when localStorage changes or page becomes visible
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (!document.hidden) {
@@ -64,8 +64,19 @@ const ClientView = () => {
       }
     };
 
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "payment-statuses") {
+        setPayments(loadPayments());
+      }
+    };
+
     document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("storage", handleStorageChange);
+    
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("storage", handleStorageChange);
+    };
   }, []);
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
@@ -81,9 +92,10 @@ const ClientView = () => {
     .filter(p => p.status === "paid")
     .reduce((sum, p) => sum + p.amount, 0);
 
-  const totalDue = payments
-    .filter(p => p.status === "due" && parseISO(p.date) <= new Date())
-    .reduce((sum, p) => sum + p.amount, 0);
+  const overduePayments = payments
+    .filter(p => p.status === "due" && parseISO(p.date) <= new Date());
+    
+  const totalDue = overduePayments.reduce((sum, p) => sum + p.amount, 0);
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
@@ -99,13 +111,21 @@ const ClientView = () => {
 
         {/* Due Payment Alert */}
         {totalDue > 0 && (
-          <Alert variant="destructive" className="border-destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Payment Due</AlertTitle>
-            <AlertDescription>
-              You have ${totalDue} in overdue payments that need to be cleared.
-            </AlertDescription>
-          </Alert>
+          <div className="space-y-3">
+            {overduePayments.map((payment) => (
+              <Alert 
+                key={payment.date}
+                variant="destructive" 
+                className="border-2 border-destructive bg-destructive/10"
+              >
+                <AlertCircle className="h-5 w-5" />
+                <AlertTitle className="text-lg font-bold">Payment Due - ${payment.amount}</AlertTitle>
+                <AlertDescription className="text-base font-medium">
+                  Please make payment for {format(parseISO(payment.date), "MMMM d, yyyy")}
+                </AlertDescription>
+              </Alert>
+            ))}
+          </div>
         )}
 
         {/* Monthly Summary */}
@@ -156,11 +176,15 @@ const ClientView = () => {
             <p className="text-center text-muted-foreground py-8">No payments scheduled for this month</p>
           ) : (
             <div className="space-y-3">
-              {monthlyPayments.map((payment) => (
-                <div
-                  key={payment.date}
-                  className="flex items-center justify-between p-4 rounded-lg border bg-card"
-                >
+              {monthlyPayments.map((payment) => {
+                const isOverdue = payment.status === "due" && parseISO(payment.date) <= new Date();
+                return (
+                  <div
+                    key={payment.date}
+                    className={`flex items-center justify-between p-4 rounded-lg border ${
+                      isOverdue ? "border-destructive bg-destructive/5" : "bg-card"
+                    }`}
+                  >
                   <div className="flex items-center gap-4">
                     <div className="text-center min-w-[60px]">
                       <p className="text-2xl font-bold text-foreground">
@@ -182,13 +206,16 @@ const ClientView = () => {
                     className={
                       payment.status === "paid"
                         ? "bg-success text-success-foreground"
+                        : isOverdue 
+                        ? "bg-destructive text-destructive-foreground"
                         : "bg-warning text-warning-foreground"
                     }
                   >
-                    {payment.status === "paid" ? "Paid" : "Due"}
+                    {payment.status === "paid" ? "Paid" : isOverdue ? "Overdue" : "Due"}
                   </Badge>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </Card>
