@@ -88,7 +88,6 @@ const Login = ({ onLogin }: LoginProps) => {
         </form>
 
         <div className="mt-4 text-center text-sm text-muted-foreground">
-          <p>Admin access only - Use credentials: admin / admin@partha</p>
         </div>
       </Card>
     </div>
