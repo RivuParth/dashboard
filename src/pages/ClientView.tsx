@@ -65,17 +65,23 @@ const ClientView = () => {
     };
 
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === "payment-statuses") {
+      if (e.key === "payment-statuses" || e.key === null) {
         setPayments(loadPayments());
       }
     };
 
+    const handlePaymentUpdate = () => {
+      setPayments(loadPayments());
+    };
+
     document.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("storage", handleStorageChange);
+    window.addEventListener("payment-status-update", handlePaymentUpdate);
     
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("payment-status-update", handlePaymentUpdate);
     };
   }, []);
   const [currentMonth, setCurrentMonth] = useState(new Date());

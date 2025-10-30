@@ -92,7 +92,8 @@ const Dashboard = () => {
     });
     localStorage.setItem("payment-statuses", JSON.stringify(statuses));
     
-    // Trigger storage event for other tabs/windows
+    // Trigger custom event for same-page sync and storage event for other tabs
+    window.dispatchEvent(new CustomEvent("payment-status-update", { detail: statuses }));
     window.dispatchEvent(new Event("storage"));
     
     const payment = updatedPayments.find(p => p.date === date);
