@@ -1,5 +1,4 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -8,43 +7,28 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { LockIcon, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
-const ADMIN_EMAIL = "parthbhowmick00@gmail.com";
-const ADMIN_PASSWORD = "Rivu@1499";
+interface LoginProps {
+  onLogin: (username: string, password: string) => boolean;
+}
 
-const Login = () => {
-  const navigate = useNavigate();
-  const [email, setEmail] = useState("");
+const Login = ({ onLogin }: LoginProps) => {
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    // Check if already logged in
-    const isLoggedIn = sessionStorage.getItem("admin_logged_in");
-    if (isLoggedIn === "true") {
-      navigate("/");
-    }
-  }, [navigate]);
-
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
 
-    try {
-      // Check static credentials
-      if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
-        sessionStorage.setItem("admin_logged_in", "true");
-        toast.success("Logged in successfully");
-        navigate("/");
-      } else {
-        setError("Invalid credentials. Please check your email and password.");
-      }
-    } catch (err: any) {
-      setError("Login failed. Please try again.");
-    } finally {
-      setIsLoading(false);
+    const success = onLogin(username, password);
+    if (success) {
+      toast.success("Logged in successfully");
+    } else {
+      setError("Invalid credentials. Please try again.");
     }
+    setIsLoading(false);
   };
 
   return (
@@ -73,13 +57,13 @@ const Login = () => {
 
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="username">Username</Label>
             <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="admin@example.com"
+              id="username"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="admin"
               required
               disabled={isLoading}
             />
@@ -104,7 +88,7 @@ const Login = () => {
         </form>
 
         <div className="mt-4 text-center text-sm text-muted-foreground">
-          <p>Admin access only</p>
+          <p>Admin access only - Use credentials: admin / admin@partha</p>
         </div>
       </Card>
     </div>

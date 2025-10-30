@@ -1,49 +1,36 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CalendarIcon, DollarSign, TrendingUp, ExternalLink, LogOut } from "lucide-react";
-import { format, addWeeks, startOfMonth, endOfMonth, parseISO } from "date-fns";
+import { format, addWeeks, startOfMonth, endOfMonth, isSameDay, parseISO } from "date-fns";
 import { toast } from "sonner";
 
 type Payment = {
   date: string;
   amount: number;
-  status: "paid" | "due";
+  status: "paid" | "due" | "nothing";
 };
 
-const Dashboard = () => {
-  const navigate = useNavigate();
-  const startDate = new Date(2025, 9, 31); // Oct 31, 2025
+interface DashboardProps {
+  onLogout: () => void;
+}
+
+const Dashboard = ({ onLogout }: DashboardProps) => {
+  const startDate = new Date(2025, 9, 31); // October 31, 2025
   const paymentAmount = 300;
-  const [isLoading, setIsLoading] = useState(true);
 
-  // Check authentication
-  useEffect(() => {
-    const isLoggedIn = sessionStorage.getItem("admin_logged_in");
-    
-    if (isLoggedIn !== "true") {
-      navigate("/login");
-      return;
-    }
-
-    // Clear old payment data to start fresh
-    localStorage.removeItem("payment-statuses");
-    setIsLoading(false);
-  }, [navigate]);
-  
   // Generate bi-weekly payments for the year
   const generatePayments = (): Payment[] => {
     const payments: Payment[] = [];
     let currentDate = startDate;
-    const endDate = new Date(2028, 11, 31); // Dec 31, 2028
+    const endDate = new Date(2028, 11, 31); // December 31, 2028
     
     while (currentDate <= endDate) {
       payments.push({
         date: format(currentDate, "yyyy-MM-dd"),
         amount: paymentAmount,
-        status: currentDate < new Date() ? "paid" : "due",
+        status: "nothing",
       });
       currentDate = addWeeks(currentDate, 2);
     }
@@ -75,29 +62,23 @@ const Dashboard = () => {
   const [payments, setPayments] = useState<Payment[]>(loadPayments());
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
-  const togglePaymentStatus = (date: string) => {
+  const setPaymentStatus = (date: string, newStatus: "paid" | "due" | "nothing") => {
     const updatedPayments = payments.map(p => {
       if (p.date === date) {
-        const newStatus: "paid" | "due" = p.status === "paid" ? "due" : "paid";
         return { ...p, status: newStatus };
       }
       return p;
     });
     setPayments(updatedPayments);
-    
+
     // Save to localStorage
-    const statuses: Record<string, "paid" | "due"> = {};
+    const statuses: Record<string, "paid" | "due" | "nothing"> = {};
     updatedPayments.forEach(p => {
       statuses[p.date] = p.status;
     });
     localStorage.setItem("payment-statuses", JSON.stringify(statuses));
-    
-    // Trigger custom event for same-page sync and storage event for other tabs
-    window.dispatchEvent(new CustomEvent("payment-status-update", { detail: statuses }));
-    window.dispatchEvent(new Event("storage"));
-    
-    const payment = updatedPayments.find(p => p.date === date);
-    toast.success(`Payment marked as ${payment?.status === "paid" ? "Paid" : "Due"}`);
+
+    toast.success("Payment status updated");
   };
 
   const monthStart = startOfMonth(currentMonth);
@@ -124,18 +105,9 @@ const Dashboard = () => {
   };
 
   const handleLogout = () => {
-    sessionStorage.removeItem("admin_logged_in");
+    onLogout();
     toast.success("Logged out successfully");
-    navigate("/login");
   };
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">Loading...</p>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
@@ -250,24 +222,42 @@ const Dashboard = () => {
                     <p className="text-sm text-muted-foreground">${payment.amount}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                   <Badge
-                    variant={payment.status === "paid" ? "default" : "secondary"}
+                    variant={payment.status === "paid" ? "default" : payment.status === "due" ? "secondary" : "outline"}
                     className={
                       payment.status === "paid"
                         ? "bg-success text-success-foreground hover:bg-success/90"
-                        : "bg-warning text-warning-foreground hover:bg-warning/90"
+                        : payment.status === "due"
+                        ? "bg-warning text-warning-foreground hover:bg-warning/90"
+                        : "bg-gray-100 text-gray-700"
                     }
                   >
-                    {payment.status === "paid" ? "Paid" : "Due"}
+                    {payment.status === "paid" ? "Paid" : payment.status === "due" ? "Due" : "Nothing"}
                   </Badge>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => togglePaymentStatus(payment.date)}
-                  >
-                    Mark as {payment.status === "paid" ? "Due" : "Paid"}
-                  </Button>
+                  <div className="flex gap-1">
+                    <Button
+                      size="sm"
+                      variant={payment.status === "paid" ? "default" : "outline"}
+                      onClick={() => setPaymentStatus(payment.date, "paid")}
+                    >
+                      Paid
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={payment.status === "due" ? "secondary" : "outline"}
+                      onClick={() => setPaymentStatus(payment.date, "due")}
+                    >
+                      Due
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={payment.status === "nothing" ? "outline" : "ghost"}
+                      onClick={() => setPaymentStatus(payment.date, "nothing")}
+                    >
+                      Nothing
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))}
