@@ -92,7 +92,11 @@ const Dashboard = () => {
     });
     localStorage.setItem("payment-statuses", JSON.stringify(statuses));
     
-    toast.success("Payment status updated");
+    // Trigger storage event for other tabs/windows
+    window.dispatchEvent(new Event("storage"));
+    
+    const payment = updatedPayments.find(p => p.date === date);
+    toast.success(`Payment marked as ${payment?.status === "paid" ? "Paid" : "Due"}`);
   };
 
   const monthStart = startOfMonth(currentMonth);

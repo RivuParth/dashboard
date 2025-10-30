@@ -87,15 +87,17 @@ const ClientView = () => {
     const paymentDate = parseISO(p.date);
     return paymentDate >= monthStart && paymentDate <= monthEnd;
   });
-
-  const monthlyReceived = monthlyPayments
-    .filter(p => p.status === "paid")
-    .reduce((sum, p) => sum + p.amount, 0);
-
+  
   const overduePayments = payments
     .filter(p => p.status === "due" && parseISO(p.date) <= new Date());
     
   const totalDue = overduePayments.reduce((sum, p) => sum + p.amount, 0);
+  
+  const totalPaid = payments
+    .filter(p => p.status === "paid")
+    .reduce((sum, p) => sum + p.amount, 0);
+    
+  const nextPayment = payments.find(p => p.status === "due" && parseISO(p.date) > new Date());
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
@@ -128,42 +130,67 @@ const ClientView = () => {
           </div>
         )}
 
-        {/* Monthly Summary */}
-        <Card className="p-6">
-          <div className="flex items-center justify-center gap-8">
+        {/* Payment Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="p-6 bg-success/10 border-success">
             <div className="text-center">
-              <p className="text-sm text-muted-foreground mb-1">Current Month</p>
-              <p className="text-3xl font-bold text-foreground">{format(currentMonth, "MMMM yyyy")}</p>
+              <p className="text-sm text-muted-foreground mb-2">Total Paid</p>
+              <p className="text-4xl font-bold text-success">${totalPaid}</p>
+              <p className="text-xs text-muted-foreground mt-1">Payment Received</p>
             </div>
-            <div className="h-16 w-px bg-border" />
+          </Card>
+          
+          <Card className={`p-6 ${totalDue > 0 ? "bg-destructive/10 border-destructive" : "bg-muted"}`}>
             <div className="text-center">
-              <p className="text-sm text-muted-foreground mb-1">Received This Month</p>
-              <p className="text-3xl font-bold text-success">${monthlyReceived}</p>
+              <p className="text-sm text-muted-foreground mb-2">Total Due</p>
+              <p className={`text-4xl font-bold ${totalDue > 0 ? "text-destructive" : "text-foreground"}`}>
+                ${totalDue}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {totalDue > 0 ? "Payment Required" : "All Cleared"}
+              </p>
             </div>
+          </Card>
+          
+          <Card className="p-6 bg-primary/10 border-primary">
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground mb-2">Next Payment</p>
+              {nextPayment ? (
+                <>
+                  <p className="text-2xl font-bold text-primary">
+                    {format(parseISO(nextPayment.date), "MMM dd")}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">${nextPayment.amount}</p>
+                </>
+              ) : (
+                <p className="text-xl font-bold text-muted-foreground">None</p>
+              )}
+            </div>
+          </Card>
+        </div>
+
+        {/* Month Navigation */}
+        <Card className="p-4">
+          <div className="flex justify-between items-center">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
+            >
+              Previous
+            </Button>
+            <h2 className="text-xl font-bold text-foreground">
+              {format(currentMonth, "MMMM yyyy")}
+            </h2>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
+            >
+              Next
+            </Button>
           </div>
         </Card>
-
-        {/* Navigation */}
-        <div className="flex justify-center gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
-          >
-            Previous Month
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => setCurrentMonth(new Date())}
-          >
-            Current Month
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
-          >
-            Next Month
-          </Button>
-        </div>
 
         {/* Payment Schedule */}
         <Card className="p-6">
