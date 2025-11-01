@@ -13,14 +13,15 @@ sudo apt update && sudo apt upgrade -y
 
 # Install Node.js and npm (if not already installed)
 echo "📦 Installing Node.js and npm..."
-if ! command -v node &> /dev/null; then
+if ! command -v node &> /dev/null || [[ "$(node --version)" != v20* ]]; then
+    echo "Installing Node.js 20..."
     curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
     sudo apt-get install -y nodejs
 fi
 
 # Install build tools for better-sqlite3
 echo "📦 Installing build tools..."
-sudo apt-get install -y build-essential python3
+sudo apt-get install -y build-essential python3 python3-dev
 
 # Install PM2 for process management
 echo "📦 Installing PM2..."
@@ -39,9 +40,9 @@ else
     echo "📁 Already in dashboard directory"
 fi
 
-# Install dependencies
+# Install dependencies with increased timeout and memory
 echo "📦 Installing dependencies..."
-npm install --production
+npm install --production --timeout=600000 --max-old-space-size=4096
 
 # Build the frontend
 echo "🔨 Building frontend..."
