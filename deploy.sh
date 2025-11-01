@@ -27,6 +27,16 @@ sudo apt-get install -y build-essential python3 python3-dev
 echo "📦 Installing PM2..."
 sudo npm install -g pm2
 
+# Add swap memory to prevent OOM issues
+echo "💾 Adding swap memory..."
+sudo fallocate -l 2G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+swapon --show
+free -h
+
 # Check if we're already in the dashboard directory
 if [ "$(basename "$PWD")" != "dashboard" ]; then
     echo "📁 Navigating to dashboard directory..."
@@ -40,9 +50,9 @@ else
     echo "📁 Already in dashboard directory"
 fi
 
-# Install dependencies with increased timeout and memory
+# Install dependencies with npm ci for better memory usage
 echo "📦 Installing dependencies..."
-npm install --production --timeout=600000 --max-old-space-size=4096
+npm ci --omit=dev --no-audit --no-fund
 
 # Build the frontend
 echo "🔨 Building frontend..."
