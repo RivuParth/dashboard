@@ -22,9 +22,13 @@ fi
 echo "📦 Installing PM2..."
 sudo npm install -g pm2
 
-# Navigate to the cloned repository
-echo "📁 Navigating to dashboard directory..."
-cd dashboard
+# Check if we're already in the dashboard directory
+if [ "$(basename "$PWD")" != "dashboard" ]; then
+    echo "📁 Navigating to dashboard directory..."
+    cd dashboard
+else
+    echo "📁 Already in dashboard directory"
+fi
 
 # Install dependencies
 echo "📦 Installing dependencies..."
