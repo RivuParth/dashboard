@@ -25,7 +25,12 @@ sudo npm install -g pm2
 # Check if we're already in the dashboard directory
 if [ "$(basename "$PWD")" != "dashboard" ]; then
     echo "📁 Navigating to dashboard directory..."
-    cd dashboard
+    if [ -d "dashboard" ]; then
+        cd dashboard
+    else
+        echo "❌ Error: dashboard directory not found. Please run this script from the parent directory or ensure the repository is cloned as 'dashboard'."
+        exit 1
+    fi
 else
     echo "📁 Already in dashboard directory"
 fi
