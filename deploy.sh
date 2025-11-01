@@ -14,9 +14,13 @@ sudo apt update && sudo apt upgrade -y
 # Install Node.js and npm (if not already installed)
 echo "📦 Installing Node.js and npm..."
 if ! command -v node &> /dev/null; then
-    curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+    curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
     sudo apt-get install -y nodejs
 fi
+
+# Install build tools for better-sqlite3
+echo "📦 Installing build tools..."
+sudo apt-get install -y build-essential python3
 
 # Install PM2 for process management
 echo "📦 Installing PM2..."
