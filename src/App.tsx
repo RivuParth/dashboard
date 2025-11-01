@@ -11,28 +11,77 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+const API_BASE_URL = 'http://localhost:3001/api';
+
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
 
   useEffect(() => {
-    const authStatus = localStorage.getItem("isAuthenticated");
-    if (authStatus === "true") {
-      setIsAuthenticated(true);
+    const storedSessionId = localStorage.getItem("sessionId");
+    if (storedSessionId) {
+      checkAuthStatus(storedSessionId);
     }
   }, []);
 
-  const handleLogin = (username: string, password: string) => {
-    if (username === "admin" && password === "admin@partha") {
-      setIsAuthenticated(true);
-      localStorage.setItem("isAuthenticated", "true");
-      return true;
+  const checkAuthStatus = async (sessionId: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/status`, {
+        headers: {
+          'Authorization': `Bearer ${sessionId}`,
+        },
+      });
+      if (response.ok) {
+        setIsAuthenticated(true);
+        setSessionId(sessionId);
+      } else {
+        localStorage.removeItem("sessionId");
+      }
+    } catch (error) {
+      console.error('Auth check failed:', error);
+      localStorage.removeItem("sessionId");
+    }
+  };
+
+  const handleLogin = async (username: string, password: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setIsAuthenticated(true);
+        setSessionId(data.sessionId);
+        localStorage.setItem("sessionId", data.sessionId);
+        return true;
+      }
+    } catch (error) {
+      console.error('Login failed:', error);
     }
     return false;
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    if (sessionId) {
+      try {
+        await fetch(`${API_BASE_URL}/logout`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${sessionId}`,
+          },
+        });
+      } catch (error) {
+        console.error('Logout failed:', error);
+      }
+    }
     setIsAuthenticated(false);
-    localStorage.removeItem("isAuthenticated");
+    setSessionId(null);
+    localStorage.removeItem("sessionId");
   };
 
   return (

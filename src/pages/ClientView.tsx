@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CalendarIcon } from "lucide-react";
-import { format, addWeeks, startOfMonth, endOfMonth, parseISO } from "date-fns";
+import { format, startOfMonth, endOfMonth, parseISO } from "date-fns";
 
 type Payment = {
   date: string;
@@ -10,62 +10,52 @@ type Payment = {
   status: "paid" | "due" | "nothing";
 };
 
+const API_BASE_URL = 'http://localhost:3001/api';
+
 const ClientView = () => {
-  const startDate = new Date(2025, 9, 31); // October 31, 2025
-  const paymentAmount = 300;
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
 
-  const generatePayments = (): Payment[] => {
-    const payments: Payment[] = [];
-    let currentDate = startDate;
-    const endDate = new Date(2028, 11, 31); // December 31, 2028
-
-    while (currentDate <= endDate) {
-      payments.push({
-        date: format(currentDate, "yyyy-MM-dd"),
-        amount: paymentAmount,
-        status: "nothing",
-      });
-      currentDate = addWeeks(currentDate, 2);
-    }
-    return payments;
-  };
-
-  // Load payments from localStorage
-  const loadPayments = (): Payment[] => {
-    const stored = localStorage.getItem("payment-statuses");
-    if (stored) {
-      try {
-        const statuses: Record<string, string> = JSON.parse(stored);
-        const generated = generatePayments();
-        // Merge stored statuses with generated payments
-        return generated.map(p => {
-          const storedStatus = statuses[p.date];
-          return {
-            ...p,
-            status: (storedStatus === "paid" || storedStatus === "due" || storedStatus === "nothing") ? storedStatus : p.status
-          };
-        });
-      } catch (e) {
-        return generatePayments();
+  // Load payments from API
+  const loadPayments = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/payments`);
+      if (response.ok) {
+        const data = await response.json();
+        setPayments(data);
       }
+    } catch (error) {
+      console.error('Failed to load payments:', error);
+    } finally {
+      setLoading(false);
     }
-    return generatePayments();
   };
 
-  const [payments, setPayments] = useState<Payment[]>(loadPayments());
+  useEffect(() => {
+    loadPayments();
+  }, []);
 
   // Reload payments when the page becomes visible (when user switches tabs)
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (!document.hidden) {
-        setPayments(loadPayments());
+        loadPayments();
       }
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, []);
-  const [currentMonth, setCurrentMonth] = useState(new Date());
+
+  // Poll for updates every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadPayments();
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, []);
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);

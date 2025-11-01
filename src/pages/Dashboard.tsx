@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,69 +16,59 @@ interface DashboardProps {
   onLogout: () => void;
 }
 
+const API_BASE_URL = 'http://localhost:3001/api';
+
 const Dashboard = ({ onLogout }: DashboardProps) => {
-  const startDate = new Date(2025, 9, 31); // October 31, 2025
-  const paymentAmount = 300;
-
-  // Generate bi-weekly payments for the year
-  const generatePayments = (): Payment[] => {
-    const payments: Payment[] = [];
-    let currentDate = startDate;
-    const endDate = new Date(2028, 11, 31); // December 31, 2028
-    
-    while (currentDate <= endDate) {
-      payments.push({
-        date: format(currentDate, "yyyy-MM-dd"),
-        amount: paymentAmount,
-        status: "nothing",
-      });
-      currentDate = addWeeks(currentDate, 2);
-    }
-    return payments;
-  };
-
-  // Load payments from localStorage or generate new ones
-  const loadPayments = (): Payment[] => {
-    const stored = localStorage.getItem("payment-statuses");
-    if (stored) {
-      try {
-        const statuses: Record<string, string> = JSON.parse(stored);
-        const generated = generatePayments();
-        // Merge stored statuses with generated payments
-        return generated.map(p => {
-          const storedStatus = statuses[p.date];
-          return {
-            ...p,
-            status: (storedStatus === "paid" || storedStatus === "due") ? storedStatus : p.status
-          };
-        });
-      } catch (e) {
-        return generatePayments();
-      }
-    }
-    return generatePayments();
-  };
-
-  const [payments, setPayments] = useState<Payment[]>(loadPayments());
+  const [payments, setPayments] = useState<Payment[]>([]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [loading, setLoading] = useState(true);
 
-  const setPaymentStatus = (date: string, newStatus: "paid" | "due" | "nothing") => {
-    const updatedPayments = payments.map(p => {
-      if (p.date === date) {
-        return { ...p, status: newStatus };
+  // Load payments from API
+  const loadPayments = async () => {
+    try {
+      const sessionId = localStorage.getItem("sessionId");
+      const response = await fetch(`${API_BASE_URL}/payments`, {
+        headers: sessionId ? { 'Authorization': `Bearer ${sessionId}` } : {},
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setPayments(data);
       }
-      return p;
-    });
-    setPayments(updatedPayments);
+    } catch (error) {
+      console.error('Failed to load payments:', error);
+      toast.error('Failed to load payments');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    // Save to localStorage
-    const statuses: Record<string, "paid" | "due" | "nothing"> = {};
-    updatedPayments.forEach(p => {
-      statuses[p.date] = p.status;
-    });
-    localStorage.setItem("payment-statuses", JSON.stringify(statuses));
+  useEffect(() => {
+    loadPayments();
+  }, []);
 
-    toast.success("Payment status updated");
+  const setPaymentStatus = async (date: string, newStatus: "paid" | "due" | "nothing") => {
+    try {
+      const sessionId = localStorage.getItem("sessionId");
+      const response = await fetch(`${API_BASE_URL}/payments/${date}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(sessionId ? { 'Authorization': `Bearer ${sessionId}` } : {}),
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (response.ok) {
+        const updatedPayment = await response.json();
+        setPayments(payments.map(p => p.date === date ? updatedPayment : p));
+        toast.success("Payment status updated");
+      } else {
+        toast.error("Failed to update payment status");
+      }
+    } catch (error) {
+      console.error('Failed to update payment:', error);
+      toast.error("Failed to update payment status");
+    }
   };
 
   const monthStart = startOfMonth(currentMonth);

@@ -8,7 +8,7 @@ import { LockIcon, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
 interface LoginProps {
-  onLogin: (username: string, password: string) => boolean;
+  onLogin: (username: string, password: string) => Promise<boolean>;
 }
 
 const Login = ({ onLogin }: LoginProps) => {
@@ -17,16 +17,20 @@ const Login = ({ onLogin }: LoginProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
 
-    const success = onLogin(username, password);
-    if (success) {
-      toast.success("Logged in successfully");
-    } else {
-      setError("Invalid credentials. Please try again.");
+    try {
+      const success = await onLogin(username, password);
+      if (success) {
+        toast.success("Logged in successfully");
+      } else {
+        setError("Invalid credentials. Please try again.");
+      }
+    } catch (error) {
+      setError("Login failed. Please try again.");
     }
     setIsLoading(false);
   };

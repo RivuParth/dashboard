@@ -1,73 +1,125 @@
-# Welcome to your Lovable project
+# Payment Dashboard
 
-## Project info
+A bi-weekly payment tracking application with SQLite backend, built with React and Express.
 
-**URL**: https://lovable.dev/projects/8353819f-2aaa-4853-acd0-ff184574f146
+## Features
 
-## How can I edit this code?
+- **Admin Dashboard**: Track and manage payment statuses
+- **Client View**: Public interface for clients to view payment schedules
+- **SQLite Database**: Persistent data storage
+- **Session Authentication**: Secure login system
+- **Real-time Updates**: Client view updates automatically
 
-There are several ways of editing your application.
+## Local Development
 
-**Use Lovable**
+### Prerequisites
+- Node.js 18+
+- npm or bun
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/8353819f-2aaa-4853-acd0-ff184574f146) and start prompting.
+### Installation
 
-Changes made via Lovable will be committed automatically to this repo.
+```bash
+# Install dependencies
+npm install
 
-**Use your preferred IDE**
+# Start development servers (frontend + backend)
+npm run dev:full
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+# Or run separately:
+npm run server  # Backend on port 3001
+npm run dev     # Frontend on port 8081
 ```
 
-**Edit a file directly in GitHub**
+## Ubuntu Deployment
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Automated Deployment
 
-**Use GitHub Codespaces**
+1. **Copy files to Ubuntu server:**
+   ```bash
+   scp -r . ubuntu@your-server-ip:/tmp/payment-dashboard
+   ```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+2. **SSH into your server and run the deployment script:**
+   ```bash
+   ssh ubuntu@your-server-ip
+   sudo mv /tmp/payment-dashboard /var/www/
+   cd /var/www/payment-dashboard
+   chmod +x deploy.sh
+   ./deploy.sh
+   ```
 
-## What technologies are used for this project?
+### Manual Deployment
 
-This project is built with:
+If you prefer manual setup:
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+1. **Install dependencies:**
+   ```bash
+   sudo apt update
+   curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+   sudo apt-get install -y nodejs nginx
+   sudo npm install -g pm2 serve
+   ```
 
-## How can I deploy this project?
+2. **Setup application:**
+   ```bash
+   cd /var/www/payment-dashboard
+   npm install --production
+   npm run build
+   ```
 
-Simply open [Lovable](https://lovable.dev/projects/8353819f-2aaa-4853-acd0-ff184574f146) and click on Share -> Publish.
+3. **Configure PM2:**
+   ```bash
+   pm2 start ecosystem.config.js
+   pm2 save
+   pm2 startup
+   ```
 
-## Can I connect a custom domain to my Lovable project?
+4. **Configure Nginx:**
+   ```bash
+   sudo cp nginx.conf /etc/nginx/sites-available/payment-dashboard
+   sudo ln -s /etc/nginx/sites-available/payment-dashboard /etc/nginx/sites-enabled/
+   sudo nginx -t
+   sudo systemctl reload nginx
+   ```
 
-Yes, you can!
+## API Endpoints
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+- `POST /api/login` - User authentication
+- `POST /api/logout` - User logout
+- `GET /api/auth/status` - Check authentication status
+- `GET /api/payments` - Get all payments
+- `PUT /api/payments/:date` - Update payment status
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## Database
+
+The application uses SQLite with the following tables:
+- `users` - User accounts
+- `payments` - Payment records
+- `sessions` - User sessions
+
+Database file: `database.sqlite`
+
+## Default Credentials
+
+- Username: `admin`
+- Password: `admin@partha`
+
+## PM2 Commands
+
+```bash
+pm2 status          # Check status
+pm2 logs            # View logs
+pm2 restart all     # Restart apps
+pm2 stop all        # Stop apps
+```
+
+## Security Notes
+
+- Change default admin credentials in production
+- Configure SSL/TLS for HTTPS
+- Set up proper firewall rules
+- Regularly backup the SQLite database
+
+## License
+
+MIT
