@@ -22,15 +22,9 @@ fi
 echo "📦 Installing PM2..."
 sudo npm install -g pm2
 
-# Create application directory
-echo "📁 Creating application directory..."
-sudo mkdir -p /var/www/payment-dashboard
-sudo chown -R $USER:$USER /var/www/payment-dashboard
-
-# Copy application files (assuming this script is run from the project directory)
-echo "📋 Copying application files..."
-cp -r . /var/www/payment-dashboard/
-cd /var/www/payment-dashboard
+# Navigate to the cloned repository
+echo "📁 Navigating to dashboard directory..."
+cd dashboard
 
 # Install dependencies
 echo "📦 Installing dependencies..."
@@ -119,6 +113,10 @@ sudo systemctl reload nginx
 echo "🔒 Setting database permissions..."
 touch database.sqlite
 chmod 664 database.sqlite
+
+# Create symlink for easier access (optional)
+echo "🔗 Creating symlink..."
+sudo ln -sf $(pwd) /var/www/payment-dashboard
 
 # Start the application with PM2
 echo "🚀 Starting application with PM2..."
