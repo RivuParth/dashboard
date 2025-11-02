@@ -65,8 +65,8 @@ cat > ecosystem.config.js << EOF
 export default {
   apps: [{
     name: 'payment-dashboard-server',
-    script: 'server/server.ts',
-    interpreter: 'tsx',
+    script: 'npx',
+    args: 'tsx server/server.ts',
     instances: 1,
     exec_mode: 'fork',
     env: {
