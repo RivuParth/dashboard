@@ -29,6 +29,11 @@ sudo npm install -g pm2
 
 # Add swap memory to prevent OOM issues
 echo "💾 Adding swap memory..."
+if [ -f /swapfile ]; then
+    echo "Swap file already exists, removing it..."
+    sudo swapoff /swapfile 2>/dev/null || true
+    sudo rm -f /swapfile
+fi
 sudo fallocate -l 2G /swapfile
 sudo chmod 600 /swapfile
 sudo mkswap /swapfile
@@ -57,7 +62,7 @@ npm ci --no-audit --no-fund
 # Create ecosystem file for PM2
 echo "⚙️ Creating PM2 ecosystem file..."
 cat > ecosystem.config.js << EOF
-module.exports = {
+export default {
   apps: [{
     name: 'payment-dashboard',
     script: 'npm',
