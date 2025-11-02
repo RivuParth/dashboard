@@ -52,41 +52,26 @@ fi
 
 # Install dependencies with npm ci for better memory usage
 echo "📦 Installing dependencies..."
-npm ci --omit=dev --no-audit --no-fund
-
-# Build the frontend
-echo "🔨 Building frontend..."
-npm run build
+npm ci --no-audit --no-fund
 
 # Create ecosystem file for PM2
 echo "⚙️ Creating PM2 ecosystem file..."
 cat > ecosystem.config.js << EOF
 module.exports = {
   apps: [{
-    name: 'payment-dashboard-server',
-    script: 'server/server.ts',
+    name: 'payment-dashboard',
+    script: 'npm',
+    args: 'run dev:full',
     instances: 1,
     exec_mode: 'fork',
     env: {
-      NODE_ENV: 'production',
-      PORT: 3001
-    }
-  }, {
-    name: 'payment-dashboard-frontend',
-    script: 'serve',
-    args: 'dist -s -l 3000',
-    instances: 1,
-    exec_mode: 'fork',
-    env: {
-      NODE_ENV: 'production'
+      NODE_ENV: 'development'
     }
   }]
 };
 EOF
 
-# Install serve globally for serving the built frontend
-echo "📦 Installing serve for frontend..."
-sudo npm install -g serve
+# Note: No need to install serve since we're running dev:full
 
 # Install nginx (if not already installed)
 echo "📦 Installing nginx..."
@@ -99,9 +84,9 @@ server {
     listen 80;
     server_name _;
 
-    # Frontend
+    # Frontend (Vite dev server)
     location / {
-        proxy_pass http://localhost:3000;
+        proxy_pass http://localhost:5173;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';
